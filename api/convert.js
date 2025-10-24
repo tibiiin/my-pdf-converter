@@ -24,15 +24,15 @@ class NodeCanvasFactory {
 }
 // ---------------------------------------------------
 
-// Disable Vercel's default body parser
-export const config = {
+// We are NOT using ESM, so we export config this way
+module.exports.config = {
     api: {
         bodyParser: false,
     },
 };
 
-// The main serverless function
-export default async function handler(req, res) {
+// The main serverless function, exported as default
+module.exports.default = async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
@@ -61,7 +61,7 @@ export default async function handler(req, res) {
         
         const zip = new JSZip();
         
-        // *** THIS IS THE REAL FIX: Removed the extra "new" ***
+        // The typo is definitely fixed here
         const canvasFactory = new NodeCanvasFactory();
 
         // 4. Loop through each page and convert
