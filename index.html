@@ -115,10 +115,21 @@
                     body: formData,
                 });
 
+                // *** THIS IS THE IMPROVED ERROR HANDLING ***
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || `Server error: ${response.status}`);
+                    let errorMessage;
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        const errorData = await response.json();
+                        errorMessage = errorData.message || 'Server error, but no message provided.';
+                    } else {
+                        errorMessage = await response.text();
+                    }
+                    // Sanitize HTML to prevent XSS if displaying text
+                    errorMessage = errorMessage.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                    throw new Error(errorMessage);
                 }
+                // *** END OF IMPROVEMENT ***
 
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -138,7 +149,11 @@
 
             } catch (err) {
                 console.error('Conversion failed:', err);
-                resultsEl.innerHTML = `<p class="text-red-600"><strong>Error:</strong> Could not convert file. ${err.message}</p>`;
+                // Display the error message in a preformatted tag to respect newlines/spacing
+                resultsEl.innerHTML = `<div class="p-3 bg-red-50 text-red-700 rounded-md border border-red-200">
+                    <strong class="font-bold">Error:</strong>
+                    <pre class="mt-2 text-left text-sm whitespace-pre-wrap">${err.message}</pre>
+                </div>`;
             } finally {
                 loadingEl.classList.add('hidden');
                 startButton.disabled = false;

@@ -1,12 +1,10 @@
-const express = require('express');
-const multer = require('multer');
 const { getDocument } = require('pdfjs-dist/legacy/build/pdf.js');
 const { createCanvas } = require('canvas');
 const JSZip = require('jszip');
-const cors = require('cors'); // <-- CRITICAL: For cross-domain requests
+const formidable = require('formidable');
+const fs = require('fs');
 
 // --- Polyfill for pdf.js in Node.js environment ---
-// This is necessary to make pdf.js work on a server
 class NodeCanvasFactory {
     create(width, height) {
         const canvas = createCanvas(width, height);
@@ -26,40 +24,47 @@ class NodeCanvasFactory {
 }
 // ---------------------------------------------------
 
-const app = express();
-const port = process.env.PORT || 3001;
+// Disable Vercel's default body parser
+export const config = {
+    api: {
+        bodyParser: false,
+    },
+};
 
-// --- Middleware ---
-// 1. Enable CORS for all origins (you can restrict this to your Vercel URL later)
-app.use(cors());
-// 2. Set up multer for file uploads in memory
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
-
-// --- Routes ---
-// Health check route
-app.get('/', (req, res) => {
-    res.send('PDF to Image Backend is running!');
-});
-
-// The main conversion route
-app.post('/api/convert', upload.single('pdfFile'), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ error: 'No PDF file provided.' });
+// The main serverless function
+export default async function handler(req, res) {
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
     try {
-        const scale = parseFloat(req.body.scale) || 1.5;
-        const pdfBuffer = req.file.buffer;
+        const form = formidable({});
+        
+        // 1. Parse the incoming form data
+        const [fields, files] = await form.parse(req);
 
-        // 1. Load the PDF document from the buffer
+        // formidable v3 wraps fields and files in arrays, get the first value
+        const pdfFile = files.pdfFile ? files.pdfFile[0] : null;
+        const scale = fields.scale ? parseFloat(fields.scale[0]) : 1.5;
+        
+        if (!pdfFile) {
+            return res.status(400).json({ error: 'No PDF file provided.' });
+        }
+
+        // 2. Read the PDF file from its temporary path
+        const pdfBuffer = fs.readFileSync(pdfFile.filepath);
+        fs.unlinkSync(pdfFile.filepath); // Clean up the temporary file
+
+        // 3. Load the PDF document
         const pdfDocument = await getDocument({ data: pdfBuffer }).promise;
         const numPages = pdfDocument.numPages;
         
         const zip = new JSZip();
+        
+        // *** THIS IS THE FIX: Changed "new new" to just "new" ***
         const canvasFactory = new NodeCanvasFactory();
 
-        // 2. Loop through each page
+        // 4. Loop through each page and convert
         for (let i = 1; i <= numPages; i++) {
             const page = await pdfDocument.getPage(i);
             const viewport = page.getViewport({ scale });
@@ -71,25 +76,21 @@ app.post('/api/convert', upload.single('pdfFile'), async (req, res) => {
                 canvasFactory,
             };
 
-            // 3. Render page to canvas
             await page.render(renderContext).promise;
-
-            // 4. Get PNG buffer and add to zip
             const imageBuffer = canvasAndContext.canvas.toBuffer('image/png');
             zip.file(`page_${String(i).padStart(3, '0')}.png`, imageBuffer);
 
-            // 5. Clean up
             page.cleanup();
             canvasFactory.destroy(canvasAndContext);
         }
 
-        // 6. Generate the final zip file
+        // 5. Generate the final zip file buffer
         const zipBuffer = await zip.generateAsync({
             type: 'nodebuffer',
             compression: 'DEFLATE',
         });
 
-        // 7. Send the zip file back
+        // 6. Send the zip file back
         res.setHeader('Content-Type', 'application/zip');
         res.setHeader('Content-Disposition', `attachment; filename="converted_images.zip"`);
         res.status(200).send(zipBuffer);
@@ -101,9 +102,5 @@ app.post('/api/convert', upload.single('pdfFile'), async (req, res) => {
             message: error.message 
         });
     }
-});
+}
 
-// Start the server
-app.listen(port, () => {
-    console.log(`Server listening on port ${port}`);
-});
