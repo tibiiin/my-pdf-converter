@@ -6,9 +6,12 @@
 "scripts": {
 "start": "echo 'No start script, deployment is handled by Vercel'"
 },
+"engines": {
+"node": "20.x"
+},
 "dependencies": {
 "canvas": "^2.11.2",
-"formidable-serverless": "^1.1.1",
+"formidable": "^3.5.1",
 "jszip": "^3.10.1",
 "pdfjs-dist": "2.6.347"
 }
