@@ -61,7 +61,7 @@ export default async function handler(req, res) {
         
         const zip = new JSZip();
         
-        // *** THIS IS THE FIX: Changed "new new" to just "new" ***
+        // *** THIS IS THE REAL FIX: Removed the extra "new" ***
         const canvasFactory = new NodeCanvasFactory();
 
         // 4. Loop through each page and convert
