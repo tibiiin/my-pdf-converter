@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF to Image Converter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .file-input-label { transition: all 0.2s ease-in-out; }
+        .file-input-label:hover { background-color: #f3f4f6; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white w-full max-w-2xl p-6 sm:p-8 rounded-xl shadow-lg">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-900">PDF to Image Converter</h1>
+            <p class="text-gray-600 mt-2">Upload a PDF to get a .zip file of PNG images.</p>
+        </header>
+
+        <main>
+            <!-- File Input -->
+            <div class="mb-6">
+                <label for="pdf-file" class="file-input-label w-full p-8 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer">
+                    <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    <span class="mt-2 text-sm font-medium text-gray-600" id="file-name">
+                        Click to select a PDF file
+                    </span>
+                    <span class="mt-1 text-xs text-gray-500">Processing is done on our secure server</span>
+                </label>
+                <input type="file" id="pdf-file" class="hidden" accept="application/pdf" />
+            </div>
+
+            <!-- Quality Selector -->
+            <div class="mb-6">
+                <label for="quality-select" class="block text-sm font-medium text-gray-700 mb-1">Image Quality (Scale)</label>
+                <select id="quality-select" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="1">Standard (1x)</option>
+                    <option value="1.5">Good (1.5x)</option>
+                    <option value="2" selected>High (2x)</option>
+                    <option value="3">Ultra (3x)</option>
+                </select>
+            </div>
+
+            <!-- Start Button -->
+            <button id="start-button" class="w-full bg-gray-400 text-white font-bold py-3 px-4 rounded-lg shadow-md cursor-not-allowed transition duration-150 ease-in-out" disabled>
+                Select a file first
+            </button>
+
+            <!-- Loading Spinner -->
+            <div id="loading" class="hidden text-center my-4">
+                <div class="inline-block w-8 h-8 animate-spin rounded-full border-4 border-solid border-indigo-600 border-r-transparent" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p class="text-gray-600 mt-2">Uploading and converting... this may take a moment.</p>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results" class="mt-8 text-center">
+                <!-- Success/Error messages will go here -->
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('pdf-file');
+        const startButton = document.getElementById('start-button');
+        const fileNameLabel = document.getElementById('file-name');
+        const loadingEl = document.getElementById('loading');
+        const resultsEl = document.getElementById('results');
+        const qualitySelect = document.getElementById('quality-select');
+
+        // This is the relative path to our Vercel serverless function
+        const BACKEND_URL = '/api/convert'; 
+
+        let selectedFile = null;
+
+        fileInput.addEventListener('change', (e) => {
+            selectedFile = e.target.files[0];
+            resultsEl.innerHTML = ''; 
+            if (selectedFile) {
+                fileNameLabel.textContent = selectedFile.name;
+                startButton.textContent = `Convert "${selectedFile.name}"`;
+                startButton.disabled = false;
+                startButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                startButton.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+            } else {
+                fileNameLabel.textContent = 'Click to select a PDF file';
+                startButton.textContent = 'Select a file first';
+                startButton.disabled = true;
+                startButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+                startButton.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+            }
+        });
+
+        startButton.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            resultsEl.innerHTML = '';
+            loadingEl.classList.remove('hidden');
+            startButton.disabled = true;
+            startButton.textContent = 'Uploading and processing...';
+
+            const formData = new FormData();
+            formData.append('pdfFile', selectedFile);
+            formData.append('scale', qualitySelect.value);
+
+            try {
+                const response = await fetch(BACKEND_URL, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `Server error: ${response.status}`);
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+
+                const safeFilename = selectedFile.name.replace(/\.pdf$/i, '').replace(/[^a-z0-9]/gi, '_');
+                a.download = `${safeFilename}_images.zip`;
+                
+                document.body.appendChild(a);
+                a.click(); 
+                window.URL.revokeObjectURL(url);
+                a.remove();
+
+                resultsEl.innerHTML = `<p class="text-green-600 font-medium">Success! Your images.zip file is downloading.</p>`;
+
+            } catch (err) {
+                console.error('Conversion failed:', err);
+                resultsEl.innerHTML = `<p class="text-red-600"><strong>Error:</strong> Could not convert file. ${err.message}</p>`;
+            } finally {
+                loadingEl.classList.add('hidden');
+                startButton.disabled = false;
+                startButton.textContent = `Convert "${selectedFile.name}"`;
+            }
+        });
+
+        // Drag-and-drop listeners
+        const fileLabel = document.querySelector('.file-input-label');
+        ['dragover', 'dragleave', 'drop'].forEach(eventName => {
+            fileLabel.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+        fileLabel.addEventListener('dragover', () => {
+            fileLabel.classList.add('bg-indigo-50', 'border-indigo-400');
+        });
+        fileLabel.addEventListener('dragleave', () => {
+            fileLabel.classList.remove('bg-indigo-50', 'border-indigo-400');
+        });
+        fileLabel.addEventListener('drop', (e) => {
+            fileLabel.classList.remove('bg-indigo-50', 'border-indigo-400');
+            if (e.dataTransfer.files.length > 0) {
+                const droppedFile = e.dataTransfer.files[0];
+                if (droppedFile.type === 'application/pdf') {
+                    fileInput.files = e.dataTransfer.files;
+                    const changeEvent = new Event('change');
+                    fileInput.dispatchEvent(changeEvent);
+                } else {
+                    fileNameLabel.textContent = 'Please drop a PDF file only.';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+
