@@ -3,192 +3,366 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF to Image Converter</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <title>Free PDF to Image Converter | Convert PDF to PNG Instantly</title>
+    <meta name="description" content="Easily convert your PDF files to high-quality, high-resolution PNG images for free. Our online tool is fast, secure, and requires no installation. Upload your PDF and get your images in seconds.">
+    <meta name="keywords" content="pdf to image, pdf to png, pdf to jpeg, convert pdf to image, free pdf converter, online pdf converter, pdf to image online, free, secure, fast">
+    
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="httpsS://YOUR-VERCEL-DOMAIN.vercel.app/"> <meta property="og:title" content="Free PDF to Image Converter | Convert PDF to PNG Instantly">
+    <meta property="og:description" content="Fast, free, and secure online tool to convert any PDF document into a series of high-quality PNG images.">
+    <meta property="og:image" content="httpsS://YOUR-VERCEL-DOMAIN.vercel.app/social-preview.png"> <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="httpsS://YOUR-VERCEL-DOMAIN.vercel.app/"> <meta property="twitter:title" content="Free PDF to Image Converter | Convert PDF to PNG Instantly">
+    <meta property="twitter:description" content="Fast, free, and secure online tool to convert any PDF document into a series of high-quality PNG images.">
+    <meta property="twitter:image" content="httpsS://YOUR-VERCEL-DOMAIN.vercel.app/social-preview.png"> <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📄</text></svg>">
+
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .file-input-label { transition: all 0.2s ease-in-out; }
-        .file-input-label:hover { background-color: #f3f4f6; }
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --card-bg: #ffffff;
+            --border-color: #dee2e6;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            color: var(--primary-color);
+        }
+        header p {
+            font-size: 1.2rem;
+            color: var(--secondary-color);
+        }
+        main {
+            padding: 30px 0;
+        }
+        .converter-box {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .file-upload-label {
+            display: inline-block;
+            padding: 12px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .file-upload-label:hover {
+            background-color: #0056b3;
+        }
+        #pdf-file {
+            display: none;
+        }
+        #file-name {
+            margin-top: 15px;
+            font-style: italic;
+            color: var(--secondary-color);
+        }
+        #convert-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.2s;
+            display: none; /* Initially hidden */
+        }
+        #convert-btn:disabled {
+            background-color: #aaa;
+            cursor: not-allowed;
+        }
+        #convert-btn:not(:disabled):hover {
+            background-color: #218838;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #status-message {
+            margin-top: 15px;
+            font-size: 1rem;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        #results-area {
+            margin-top: 30px;
+        }
+        .image-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .image-card img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+        .image-card a {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 16px;
+            background-color: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 500;
+        }
+        .image-card a:hover {
+            background-color: #0056b3;
+        }
+        .seo-content {
+            margin-top: 40px;
+            padding: 20px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        .seo-content h2 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+        .seo-content ul {
+            list-style-type: '✔️ ';
+            padding-left: 20px;
+        }
+        .seo-content li {
+            margin-bottom: 10px;
+        }
+        footer {
+            text-align: center;
+            padding: 30px 20px;
+            margin-top: 40px;
+            border-top: 1px solid var(--border-color);
+            color: var(--secondary-color);
+            font-size: 0.9rem;
+        }
+        footer .footer-links {
+            margin-bottom: 10px;
+        }
+        footer .footer-links a {
+            color: var(--secondary-color);
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        footer .footer-links a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+<body>
 
-    <div class="bg-white w-full max-w-2xl p-6 sm:p-8 rounded-xl shadow-lg">
-        <header class="text-center mb-6">
-            <h1 class="text-3xl font-bold text-gray-900">PDF to Image Converter</h1>
-            <p class="text-gray-600 mt-2">Upload a PDF to get a .zip file of PNG images.</p>
-        </header>
+    <header>
+        <div class="container">
+            <h1>Free PDF to Image Converter</h1>
+            <p>Convert your PDF files to high-quality PNG images in seconds.</p>
+        </div>
+    </header>
 
-        <main>
-            <!-- File Input -->
-            <div class="mb-6">
-                <label for="pdf-file" class="file-input-label w-full p-8 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer">
-                    <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                    <span class="mt-2 text-sm font-medium text-gray-600" id="file-name">
-                        Click to select a PDF file
-                    </span>
-                    <span class="mt-1 text-xs text-gray-500">Processing is done on our secure server</span>
-                </label>
-                <input type="file" id="pdf-file" class="hidden" accept="application/pdf" />
+    <main>
+        <div class="container">
+            <section class="converter-box">
+                <form id="upload-form">
+                    <label for="pdf-file" class="file-upload-label">
+                        📁 Select PDF File
+                    </label>
+                    <input type="file" id="pdf-file" name="pdfFile" accept="application/pdf" required>
+                    <p id="file-name">No file selected</p>
+                    <button type="submit" id="convert-btn">Convert to Images</button>
+                </form>
+                <div id="loader" class="loader"></div>
+                <div id="status-message"></div>
+            </section>
+
+            <section id="results-area"></section>
+
+            <section class="seo-content">
+                <h2>Why Use Our PDF to PNG Converter?</h2>
+                <p>Our tool is designed to be the simplest and fastest way to convert your PDF documents into a series of high-quality PNG images. Whether you need to extract a single page or an entire document, our converter handles it all.</p>
+                <ul>
+                    <li><strong>Completely Free:</strong> No hidden fees, no subscriptions. Just free PDF to image conversion.</li>
+                    <li><strong>High Quality:</strong> We convert your PDF pages into high-resolution PNG images, preserving the quality of your original document.</li>
+                    <li><strong>Fast & Easy:</strong> The simple "Upload and Convert" process takes just a few seconds.</li>
+                    <li><strong>Secure & Private:</strong> Your files are uploaded via a secure connection. We automatically delete all files from our servers after one hour.</li>
+                    <li><strong>No Installation Needed:</strong> Our PDF converter works entirely in your browser. There's no software to download or install.</li>
+                </ul>
+
+                <h2>How to Convert PDF to Image</h2>
+                <ol>
+                    <li>Click the "Select PDF File" button to choose your document.</li>
+                    <li>Once selected, the "Convert to Images" button will appear. Click it.</li>
+                    <li>Wait for the conversion to complete. This may take a moment for large files.</li>
+                    <li>Your converted images will appear below, one for each page of the PDF.</li>
+                    <li>Click the "Download Page" button under any image to save it to your computer.</li>
+                </ol>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-links">
+                <a href="#">Contact Us</a>
+                <span>&middot;</span>
+                <a href="#">Privacy Policy</a>
+                <span>&middot;</span>
+                <a href="#">Terms of Service</a>
             </div>
-
-            <!-- Quality Selector -->
-            <div class="mb-6">
-                <label for="quality-select" class="block text-sm font-medium text-gray-700 mb-1">Image Quality (Scale)</label>
-                <select id="quality-select" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-                    <option value="1">Standard (1x)</option>
-                    <option value="1.5">Good (1.5x)</option>
-                    <option value="2" selected>High (2x)</option>
-                    <option value="3">Ultra (3x)</option>
-                </select>
-            </div>
-
-            <!-- Start Button -->
-            <button id="start-button" class="w-full bg-gray-400 text-white font-bold py-3 px-4 rounded-lg shadow-md cursor-not-allowed transition duration-150 ease-in-out" disabled>
-                Select a file first
-            </button>
-
-            <!-- Loading Spinner -->
-            <div id="loading" class="hidden text-center my-4">
-                <div class="inline-block w-8 h-8 animate-spin rounded-full border-4 border-solid border-indigo-600 border-r-transparent" role="status">
-                    <span class="sr-only">Loading...</span>
-                </div>
-                <p class="text-gray-600 mt-2">Uploading and converting... this may take a moment.</p>
-            </div>
-
-            <!-- Results Section -->
-            <div id="results" class="mt-8 text-center">
-                <!-- Success/Error messages will go here -->
-            </div>
-        </main>
-    </div>
+            <p>&copy; <span id="current-year"></span> Your Website Name. All rights reserved.</p>
+        </div>
+    </footer>
 
     <script>
-        const fileInput = document.getElementById('pdf-file');
-        const startButton = document.getElementById('start-button');
-        const fileNameLabel = document.getElementById('file-name');
-        const loadingEl = document.getElementById('loading');
-        const resultsEl = document.getElementById('results');
-        const qualitySelect = document.getElementById('quality-select');
+        // Set current year in footer
+        document.getElementById('current-year').textContent = new Date().getFullYear();
 
-        // This is the relative path to our Vercel serverless function
-        const BACKEND_URL = '/api/convert'; 
+        const uploadForm = document.getElementById('upload-form');
+        const pdfFileInput = document.getElementById('pdf-file');
+        const fileNameDisplay = document.getElementById('file-name');
+        const convertBtn = document.getElementById('convert-btn');
+        const loader = document.getElementById('loader');
+        const statusMessage = document.getElementById('status-message');
+        const resultsArea = document.getElementById('results-area');
 
-        let selectedFile = null;
-
-        fileInput.addEventListener('change', (e) => {
-            selectedFile = e.target.files[0];
-            resultsEl.innerHTML = ''; 
-            if (selectedFile) {
-                fileNameLabel.textContent = selectedFile.name;
-                startButton.textContent = `Convert "${selectedFile.name}"`;
-                startButton.disabled = false;
-                startButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
-                startButton.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+        pdfFileInput.addEventListener('change', () => {
+            if (pdfFileInput.files.length > 0) {
+                fileNameDisplay.textContent = pdfFileInput.files[0].name;
+                convertBtn.style.display = 'inline-block';
             } else {
-                fileNameLabel.textContent = 'Click to select a PDF file';
-                startButton.textContent = 'Select a file first';
-                startButton.disabled = true;
-                startButton.classList.add('bg-gray-400', 'cursor-not-allowed');
-                startButton.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                fileNameDisplay.textContent = 'No file selected';
+                convertBtn.style.display = 'none';
             }
         });
 
-        startButton.addEventListener('click', async () => {
-            if (!selectedFile) return;
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-            resultsEl.innerHTML = '';
-            loadingEl.classList.remove('hidden');
-            startButton.disabled = true;
-            startButton.textContent = 'Uploading and processing...';
+            if (pdfFileInput.files.length === 0) {
+                showError('Please select a PDF file first.');
+                return;
+            }
+
+            // Reset UI
+            showLoading(true);
+            resultsArea.innerHTML = '';
+            statusMessage.textContent = '';
+            convertBtn.disabled = true;
 
             const formData = new FormData();
-            formData.append('pdfFile', selectedFile);
-            formData.append('scale', qualitySelect.value);
+            formData.append('pdfFile', pdfFileInput.files[0]);
 
             try {
-                const response = await fetch(BACKEND_URL, {
+                // We call our serverless function at /api/convert
+                const response = await fetch('/api/convert', {
                     method: 'POST',
                     body: formData,
                 });
 
-                // *** THIS IS THE IMPROVED ERROR HANDLING ***
-                if (!response.ok) {
-                    let errorMessage;
-                    const contentType = response.headers.get('content-type');
-                    if (contentType && contentType.includes('application/json')) {
-                        const errorData = await response.json();
-                        errorMessage = errorData.message || 'Server error, but no message provided.';
-                    } else {
-                        errorMessage = await response.text();
-                    }
-                    // Sanitize HTML to prevent XSS if displaying text
-                    errorMessage = errorMessage.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                    throw new Error(errorMessage);
+                const data = await response.json();
+
+                if (!response.ok || data.success === false) {
+                    throw new Error(data.error || 'Something went wrong.');
                 }
-                // *** END OF IMPROVEMENT ***
 
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
+                showLoading(false);
+                showSuccess(`Success! Converted ${data.images.length} page(s).`);
+                displayImages(data.images);
 
-                const safeFilename = selectedFile.name.replace(/\.pdf$/i, '').replace(/[^a-z0-9]/gi, '_');
-                a.download = `${safeFilename}_images.zip`;
-                
-                document.body.appendChild(a);
-                a.click(); 
-                window.URL.revokeObjectURL(url);
-                a.remove();
-
-                resultsEl.innerHTML = `<p class="text-green-600 font-medium">Success! Your images.zip file is downloading.</p>`;
-
-            } catch (err) {
-                console.error('Conversion failed:', err);
-                // Display the error message in a preformatted tag to respect newlines/spacing
-                resultsEl.innerHTML = `<div class="p-3 bg-red-50 text-red-700 rounded-md border border-red-200">
-                    <strong class="font-bold">Error:</strong>
-                    <pre class="mt-2 text-left text-sm whitespace-pre-wrap">${err.message}</pre>
-                </div>`;
+            } catch (error) {
+                console.error('Error:', error);
+                showLoading(false);
+                showError(`Conversion failed: ${error.message}`);
             } finally {
-                loadingEl.classList.add('hidden');
-                startButton.disabled = false;
-                startButton.textContent = `Convert "${selectedFile.name}"`;
+                convertBtn.disabled = false;
             }
         });
 
-        // Drag-and-drop listeners
-        const fileLabel = document.querySelector('.file-input-label');
-        ['dragover', 'dragleave', 'drop'].forEach(eventName => {
-            fileLabel.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            });
-        });
-        fileLabel.addEventListener('dragover', () => {
-            fileLabel.classList.add('bg-indigo-50', 'border-indigo-400');
-        });
-        fileLabel.addEventListener('dragleave', () => {
-            fileLabel.classList.remove('bg-indigo-50', 'border-indigo-400');
-        });
-        fileLabel.addEventListener('drop', (e) => {
-            fileLabel.classList.remove('bg-indigo-50', 'border-indigo-400');
-            if (e.dataTransfer.files.length > 0) {
-                const droppedFile = e.dataTransfer.files[0];
-                if (droppedFile.type === 'application/pdf') {
-                    fileInput.files = e.dataTransfer.files;
-                    const changeEvent = new Event('change');
-                    fileInput.dispatchEvent(changeEvent);
-                } else {
-                    fileNameLabel.textContent = 'Please drop a PDF file only.';
-                }
+        function showLoading(isLoading) {
+            if (isLoading) {
+                loader.style.display = 'block';
+                statusMessage.textContent = 'Converting... This may take a moment for large PDFs.';
+            } else {
+                loader.style.display = 'none';
             }
-        });
+        }
+
+        function showSuccess(message) {
+            statusMessage.textContent = message;
+            statusMessage.className = 'success';
+        }
+
+        function showError(message) {
+            statusMessage.textContent = message;
+            statusMessage.className = 'error';
+        }
+
+        function displayImages(images) {
+            images.forEach((base64Image, index) => {
+                const pageNum = index + 1;
+
+                const card = document.createElement('div');
+                card.className = 'image-card';
+
+                const img = document.createElement('img');
+                img.src = base64Image;
+                img.alt = `Converted image of PDF page ${pageNum}`;
+                
+                const downloadLink = document.createElement('a');
+                downloadLink.href = base64Image;
+                downloadLink.download = `page_${pageNum}.png`;
+                downloadLink.textContent = `Download Page ${pageNum} (.png)`;
+
+                card.appendChild(img);
+                card.appendChild(document.createElement('br'));
+                card.appendChild(downloadLink);
+                resultsArea.appendChild(card);
+            });
+        }
     </script>
 </body>
 </html>
-

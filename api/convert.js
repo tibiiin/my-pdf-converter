@@ -1,106 +1,104 @@
+const { formidable } = require('formidable');
+const fs = require('fs');
 const { getDocument } = require('pdfjs-dist/legacy/build/pdf.js');
 const { createCanvas } = require('canvas');
-const JSZip = require('jszip');
-const formidable = require('formidable');
-const fs = require('fs');
 
-// --- Polyfill for pdf.js in Node.js environment ---
+// This worker is needed for pdfjs-dist to work in Node.js
 class NodeCanvasFactory {
-    create(width, height) {
-        const canvas = createCanvas(width, height);
-        const context = canvas.getContext("2d");
-        return { canvas, context };
-    }
-    reset(canvasAndContext, width, height) {
-        canvasAndContext.canvas.width = width;
-        canvasAndContext.canvas.height = height;
-    }
-    destroy(canvasAndContext) {
-        canvasAndContext.canvas.width = 0;
-        canvasAndContext.canvas.height = 0;
-        canvasAndContext.canvas = null;
-        canvasAndContext.context = null;
-    }
-}
-// ---------------------------------------------------
+  create(width, height) {
+    const canvas = createCanvas(width, height);
+    const context = canvas.getContext('2d');
+    return {
+      canvas,
+      context,
+    };
+  }
 
-// We are NOT using ESM, so we export config this way
-module.exports.config = {
-    api: {
-        bodyParser: false,
-    },
+  reset(canvasAndContext, width, height) {
+    canvasAndContext.canvas.width = width;
+    canvasAndContext.canvas.height = height;
+  }
+
+  destroy(canvasAndContext) {
+    canvasAndContext.canvas.width = 0;
+    canvasAndContext.canvas.height = 0;
+    canvasAndContext.canvas = null;
+    canvasAndContext.context = null;
+  }
+}
+
+// Main handler function
+module.exports = async (req, res) => {
+  // Set CORS headers for all responses
+  res.setHeader('Access-Control-Allow-Origin', '*'); // Allow any origin
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Handle pre-flight OPTIONS request
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  // Handle POST request
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ success: false, error: 'Method Not Allowed' });
+  }
+
+  try {
+    const form = formidable({});
+    const [fields, files] = await form.parse(req);
+
+    const pdfFile = files.pdfFile;
+
+    if (!pdfFile || pdfFile.length === 0) {
+      return res.status(400).json({ success: false, error: 'No PDF file uploaded.' });
+    }
+
+    const filePath = pdfFile[0].filepath;
+    const data = new Uint8Array(fs.readFileSync(filePath));
+    const images = [];
+
+    const loadingTask = getDocument({
+      data,
+      cMapUrl: 'pdfjs-dist/cmaps/',
+      cMapPacked: true,
+    });
+
+    const pdfDocument = await loadingTask.promise;
+    const canvasFactory = new NodeCanvasFactory();
+
+    for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
+      const page = await pdfDocument.getPage(pageNum);
+      const viewport = page.getViewport({ scale: 1.5 }); // Scale 1.5 for better quality
+      const canvasAndContext = canvasFactory.create(viewport.width, viewport.height);
+      
+      const renderContext = {
+        canvasContext: canvasAndContext.context,
+        viewport,
+        canvasFactory,
+      };
+
+      await page.render(renderContext).promise;
+
+      // Convert canvas to PNG data URL
+      const imageDataUrl = canvasAndContext.canvas.toDataURL('image/png');
+      images.push(imageDataUrl);
+
+      // Clean up
+      page.cleanup();
+      canvasFactory.destroy(canvasAndContext);
+    }
+
+    // Clean up the temporary file
+    fs.unlinkSync(filePath);
+
+    // Send the images back as Base64 data URLs
+    return res.status(200).json({ success: true, images: images });
+
+  } catch (error) {
+    console.error('Conversion Error:', error);
+    return res.status(500).json({ success: false, error: 'An error occurred during conversion.', details: error.message });
+  }
 };
-
-// The main serverless function, exported as default
-module.exports.default = async function handler(req, res) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method Not Allowed' });
-    }
-
-    try {
-        const form = formidable({});
-        
-        // 1. Parse the incoming form data
-        const [fields, files] = await form.parse(req);
-
-        // formidable v3 wraps fields and files in arrays, get the first value
-        const pdfFile = files.pdfFile ? files.pdfFile[0] : null;
-        const scale = fields.scale ? parseFloat(fields.scale[0]) : 1.5;
-        
-        if (!pdfFile) {
-            return res.status(400).json({ error: 'No PDF file provided.' });
-        }
-
-        // 2. Read the PDF file from its temporary path
-        const pdfBuffer = fs.readFileSync(pdfFile.filepath);
-        fs.unlinkSync(pdfFile.filepath); // Clean up the temporary file
-
-        // 3. Load the PDF document
-        const pdfDocument = await getDocument({ data: pdfBuffer }).promise;
-        const numPages = pdfDocument.numPages;
-        
-        const zip = new JSZip();
-        
-        // The typo is definitely fixed here
-        const canvasFactory = new NodeCanvasFactory();
-
-        // 4. Loop through each page and convert
-        for (let i = 1; i <= numPages; i++) {
-            const page = await pdfDocument.getPage(i);
-            const viewport = page.getViewport({ scale });
-
-            const canvasAndContext = canvasFactory.create(viewport.width, viewport.height);
-            const renderContext = {
-                canvasContext: canvasAndContext.context,
-                viewport,
-                canvasFactory,
-            };
-
-            await page.render(renderContext).promise;
-            const imageBuffer = canvasAndContext.canvas.toBuffer('image/png');
-            zip.file(`page_${String(i).padStart(3, '0')}.png`, imageBuffer);
-
-            page.cleanup();
-            canvasFactory.destroy(canvasAndContext);
-        }
-
-        // 5. Generate the final zip file buffer
-        const zipBuffer = await zip.generateAsync({
-            type: 'nodebuffer',
-            compression: 'DEFLATE',
-        });
-
-        // 6. Send the zip file back
-        res.setHeader('Content-Type', 'application/zip');
-        res.setHeader('Content-Disposition', `attachment; filename="converted_images.zip"`);
-        res.status(200).send(zipBuffer);
-
-    } catch (error) {
-        console.error('Error in /api/convert:', error);
-        res.status(500).json({ 
-            error: 'Failed to convert PDF.', 
-            message: error.message 
-        });
-    }
-}
-

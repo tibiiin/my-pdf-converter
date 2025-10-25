@@ -1,18 +1,11 @@
 {
-"name": "pdf-converter-monorepo",
-"version": "1.0.0",
-"private": true,
-"description": "PDF to Image converter (Vercel monorepo)",
-"scripts": {
-"start": "echo 'No start script, deployment is handled by Vercel'"
-},
-"engines": {
-"node": "20.x"
-},
-"dependencies": {
-"canvas": "^2.11.2",
-"formidable": "^3.5.1",
-"jszip": "^3.10.1",
-"pdfjs-dist": "2.6.347"
-}
+  "name": "my-converter-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A serverless PDF to Image converter for Vercel.",
+  "dependencies": {
+    "canvas": "^2.11.2",
+    "formidable": "^3.5.1",
+    "pdfjs-dist": "4.4.168"
+  }
 }
